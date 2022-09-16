@@ -1,3 +1,4 @@
+![](https://github.com/mmukundi/resolu/actions/workflows/rust.yml/badge.svg)
 # Résolu
 ###### *(adv. FR) Solved, or resolved*
 
