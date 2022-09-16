@@ -1,5 +1,5 @@
 use std::convert::Infallible;
-use std::ops::{Add, Try};
+use std::ops::{Add};
 
 pub mod variable;
 pub mod constant;
@@ -19,8 +19,8 @@ fn get<T>(infallible_result:InfallibleResult<T>)->T{
 pub trait Expression
 {
     type Value;
-    fn try_add_expr<E:Expression>(self,expr:E)->Self::Output
-        where Self:Add<E>, Self::Output: Try, <<Self as Add<E>>::Output as Try>::Output :Expression, Self:Sized
+    fn try_add_expr<E:Expression,V:Expression,O>(self,expr:E)->Self::Output
+        where Self:Add<E,Output=Result<V,O>>, Self:Sized
     {
         Add::add(self,expr)
     }
