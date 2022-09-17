@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use std::ops::Add;
+use std::ops::{Add, Neg, Rem, Mul,Div,Sub};
 use crate::expression::{Expression, IntoExpression};
 
 #[derive(Debug,Ord, PartialOrd, Eq, PartialEq)]
@@ -16,40 +16,65 @@ impl <V,W:From<V>> IntoExpression<W> for Constant<V> {
     }
 }
 
-impl <L:Add<R>,R> Add<Constant<R>> for Constant<L>{
-    type Output = Constant<<L as Add<R>>::Output>;
-    fn add(self, rhs: Constant<R>) -> Self::Output {
-        Constant(self.0+rhs.0)
+macro_rules! impl_constant_op {
+    ($Op:ident,$op_method:ident) => {
+        impl <L:$Op<R>,R> $Op<Constant<R>> for Constant<L>{
+            type Output = Constant<<L as $Op<R>>::Output>;
+            fn $op_method(self, rhs: Constant<R>) -> Self::Output {
+                Constant(<L as $Op<R>>::$op_method(self.0,rhs.0))
+            }
+        }
+    };
+}
+impl_constant_op!(Add, add);
+impl_constant_op!(Mul, mul);
+impl_constant_op!(Div, div);
+impl_constant_op!(Rem, rem);
+
+impl_constant_op!(Sub, sub);
+
+impl <V:Neg> Neg for Constant<V>{
+    type Output = Constant<<V as Neg>::Output>;
+    fn neg(self) -> Self::Output {
+        Constant(Neg::neg(self.0))
     }
 }
 
 
 #[cfg(test)]
 mod tests {
+    use std::ops::{Div, Mul};
     use super::*;
 
     #[derive(Debug,Ord, PartialOrd, Eq, PartialEq)]
-    pub struct LockstepPair(usize,usize);
-    impl Expression for LockstepPair {
-        type Value = (usize,usize);
-    }
-    impl Add<usize> for LockstepPair {
-        type Output = Self;
+    pub struct Mat2<T>([[T;2];2]);
 
-        fn add(self, rhs: usize) -> Self::Output {
-            Self(self.0+rhs,self.1+rhs)
+    impl <T:Mul+Clone> Mul<T> for Mat2<T>
+    {
+        type Output = Mat2<T::Output>;
+        fn mul(self, rhs: T) -> Self::Output {
+            Mat2(self.0.map(|ts|ts.map(|t|rhs.clone()*t)))
         }
+    }
+    macro_rules! mat2 {
+        [$a:expr,$b:expr;$c:expr,$d:expr] => {Mat2([[$a,$b],[$c,$d]])};
     }
 
 
     #[test]
-    fn add_ints() {
+    fn add_same_type() {
         let result = Constant(10usize)+Constant(20usize);
         assert_eq!(result, Constant(30));
     }
     #[test]
-    fn add_different_types() {
-        let result = Constant(LockstepPair(1,33))+Constant(20usize);
-        assert_eq!(result, Constant(LockstepPair(21,53)));
+    fn mul_different_types() {
+        let result = Constant(mat2![
+            1,2;
+            3,4
+        ])*Constant(3);
+        assert_eq!(result, Constant(mat2![
+            3,6;
+            9,12
+        ]));
     }
 }
